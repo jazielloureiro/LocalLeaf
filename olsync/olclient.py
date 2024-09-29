@@ -156,10 +156,10 @@ class OverleafClient(object):
         project_infos = None
 
         # Callback function for the joinProject emitter
-        def set_project_infos(a, project_infos_dict, c, d):
+        def set_project_infos(project_infos_dict):
             # Set project_infos variable in outer scope
             nonlocal project_infos
-            project_infos = project_infos_dict
+            project_infos = project_infos_dict['project']
 
         # Convert cookie from CookieJar to string
         cookie = "GCLB={}; overleaf_session2={}" \
@@ -171,7 +171,7 @@ class OverleafClient(object):
         # Connect to Overleaf Socket.IO, send a time parameter and the cookies
         socket_io = SocketIO(
             BASE_URL,
-            params={'t': int(time.time())},
+            params={'t': int(time.time()), 'projectId': project_id},
             headers={'Cookie': cookie}
         )
 
@@ -180,8 +180,9 @@ class OverleafClient(object):
         socket_io.wait_for_callbacks()
 
         # Send the joinProject event and receive the project infos
-        socket_io.emit('joinProject', {'project_id': project_id}, set_project_infos)
-        socket_io.wait_for_callbacks()
+        socket_io.on('joinProjectResponse', set_project_infos)
+        while not project_infos:
+            socket_io.wait(1)
 
         # Disconnect from the socket if still connected
         if socket_io.connected:
