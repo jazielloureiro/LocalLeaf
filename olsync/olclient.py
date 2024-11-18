@@ -12,7 +12,6 @@
 import requests as reqs
 from bs4 import BeautifulSoup
 import json
-import uuid
 from socketIO_client import SocketIO
 import time
 
@@ -226,19 +225,14 @@ class OverleafClient(object):
                     current_overleaf_folder.append(new_folder)
                     folder_id = new_folder['_id']
                     current_overleaf_folder = new_folder['folders']
-        params = {
-            "folder_id": folder_id,
-            "_csrf": self._csrf,
-            "qquuid": str(uuid.uuid4()),
-            "qqfilename": file_name,
-            "qqtotalfilesize": file_size,
-        }
-        files = {
-            "qqfile": file
-        }
+
+        headers = {"X-CSRF-TOKEN": self._csrf}
+        params = {"folder_id": folder_id}
+        data = {"name": file_name.split(PATH_SEP)[-1]}
+        files = {"qqfile": file.read()}
 
         # Upload the file to the predefined folder
-        r = reqs.post(UPLOAD_URL.format(project_id), cookies=self._cookie, params=params, files=files)
+        r = reqs.post(UPLOAD_URL.format(project_id), cookies=self._cookie, headers=headers, data=data, params=params, files=files)
 
         return r.status_code == str(200) and json.loads(r.content)["success"]
 
