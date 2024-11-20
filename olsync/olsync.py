@@ -12,7 +12,6 @@
 
 import click
 import os
-from yaspin import yaspin
 import pickle
 import zipfile
 import io
@@ -47,10 +46,9 @@ def login(cookie_path, verbose):
         "Persisted Overleaf cookie already exist. Do you want to override it?"
     ):
         return
-    click.clear()
+
     execute_action(
         lambda: login_handler(cookie_path),
-        "Login",
         "Login successful. Cookie persisted as `"
         + click.format_filename(cookie_path)
         + "`. You may now sync your project.",
@@ -72,17 +70,13 @@ def login(cookie_path, verbose):
 )
 def list_projects(cookie_path, verbose):
     def query_projects():
-        for index, p in enumerate(
-            sorted(
-                overleaf_client.all_projects(),
-                key=lambda x: x["lastUpdated"],
-                reverse=True,
-            )
+        for i in sorted(
+            overleaf_client.all_projects(),
+            key=lambda x: x["lastUpdated"],
+            reverse=True,
         ):
-            if not index:
-                click.echo("\n")
             click.echo(
-                f"{dateutil.parser.isoparse(p['lastUpdated']).strftime('%m/%d/%Y, %H:%M:%S')} - {p['name']}"
+                f"{dateutil.parser.isoparse(i['lastUpdated']).strftime('%m/%d/%Y, %H:%M:%S')} - {i['name']}"
             )
         return True
 
@@ -96,10 +90,8 @@ def list_projects(cookie_path, verbose):
 
     overleaf_client = OverleafClient(store["cookie"], store["csrf"])
 
-    click.clear()
     execute_action(
         query_projects,
-        "Querying all projects",
         "Querying all projects successful.",
         "Querying all projects failed. Please try again.",
         verbose,
@@ -133,7 +125,6 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
         project_name = project_name or os.path.basename(os.getcwd())
         project = execute_action(
             lambda: overleaf_client.get_project(project_name),
-            "Querying project",
             "Project queried successfully.",
             "Project could not be queried.",
             verbose,
@@ -158,11 +149,8 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
 
     overleaf_client = OverleafClient(store["cookie"], store["csrf"])
 
-    click.clear()
-
     execute_action(
         download_project_pdf,
-        "Downloading project's PDF",
         "Downloading project's PDF successful.",
         "Downloading project's PDF failed. Please try again.",
         verbose,
@@ -221,7 +209,6 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
     project_name = project_name or os.path.basename(os.getcwd())
     project = execute_action(
         lambda: overleaf_client.get_project(project_name),
-        "Querying project",
         "Project queried successfully.",
         "Project could not be queried.",
         verbose,
@@ -229,7 +216,6 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
 
     project_infos = execute_action(
         lambda: overleaf_client.get_project_infos(project["id"]),
-        "Querying project details",
         "Project details queried successfully.",
         "Project details could not be queried.",
         verbose,
@@ -239,7 +225,6 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         lambda: zipfile.ZipFile(
             io.BytesIO(overleaf_client.download_project(project["id"]))
         ),
-        "Downloading project",
         "Project downloaded successfully.",
         "Project could not be downloaded.",
         verbose,
@@ -319,7 +304,6 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
     project_name = project_name or os.path.basename(os.getcwd())
     project = execute_action(
         lambda: overleaf_client.get_project(project_name),
-        "Querying project",
         "Project queried successfully.",
         "Project could not be queried.",
         verbose,
@@ -327,7 +311,6 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
 
     project_infos = execute_action(
         lambda: overleaf_client.get_project_infos(project["id"]),
-        "Querying project details",
         "Project details queried successfully.",
         "Project details could not be queried.",
         verbose,
@@ -337,17 +320,16 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         lambda: zipfile.ZipFile(
             io.BytesIO(overleaf_client.download_project(project["id"]))
         ),
-        "Downloading project",
         "Project downloaded successfully.",
         "Project could not be downloaded.",
         verbose,
     )
 
+    keep_list = olignore_keep_list(olignore_path)
+
     sync_func(
-        files_from=olignore_keep_list(olignore_path),
-        deleted_files=[
-            f for f in zip_file.namelist() if f not in olignore_keep_list(olignore_path)
-        ],
+        files_from=keep_list,
+        deleted_files=[f for f in zip_file.namelist() if f not in keep_list],
         create_file_at_to=lambda name: overleaf_client.upload_file(
             project["id"], project_infos, name, open(name, "rb")
         ),
@@ -411,8 +393,7 @@ def sync_func(
     to_name,
     verbose=False,
 ):
-    click.echo("\nSyncing files from [%s] to [%s]" % (from_name, to_name))
-    click.echo("=" * 40)
+    click.echo("Syncing files from [%s] to [%s]" % (from_name, to_name))
 
     newly_add_list = []
     update_list = []
@@ -453,7 +434,9 @@ def sync_func(
         elif delete_choice == "i":
             not_restored_list.append(name)
 
-    click.echo("\n[NEW] Following new file(s) created on [%s]" % to_name)
+    if len(newly_add_list):
+        click.echo("[NEW] Following new file(s) created on [%s]" % to_name)
+
     for name in newly_add_list:
         click.echo("\t%s" % name)
         try:
@@ -466,7 +449,9 @@ def sync_func(
                 % to_name
             )
 
-    click.echo("\n[NEW] Following new file(s) created on [%s]" % from_name)
+    if len(restore_list):
+        click.echo("[NEW] Following new file(s) created on [%s]" % from_name)
+
     for name in restore_list:
         click.echo("\t%s" % name)
         try:
@@ -479,7 +464,9 @@ def sync_func(
                 % from_name
             )
 
-    click.echo("\n[UPDATE] Following file(s) updated on [%s]" % to_name)
+    if len(update_list):
+        click.echo("[UPDATE] Following file(s) updated on [%s]" % to_name)
+
     for name in update_list:
         click.echo("\t%s" % name)
         try:
@@ -491,7 +478,9 @@ def sync_func(
                 "\n[ERROR] An error occurred while updating file(s) on [%s]" % to_name
             )
 
-    click.echo("\n[DELETE] Following file(s) deleted on [%s]" % to_name)
+    if len(delete_list):
+        click.echo("[DELETE] Following file(s) deleted on [%s]" % to_name)
+
     for name in delete_list:
         click.echo("\t%s" % name)
         try:
@@ -504,48 +493,45 @@ def sync_func(
                 % to_name
             )
 
-    click.echo("\n[SYNC] Following file(s) are up to date")
+    if len(synced_list):
+        click.echo("[SYNC] Following file(s) are up to date")
+
     for name in synced_list:
         click.echo("\t%s" % name)
 
-    click.echo(
-        "\n[SKIP] Following file(s) on [%s] have not been synced to [%s]"
-        % (from_name, to_name)
-    )
+    if len(not_sync_list):
+        click.echo(
+            "[SKIP] Following file(s) on [%s] have not been synced to [%s]"
+            % (from_name, to_name)
+        )
+
     for name in not_sync_list:
         click.echo("\t%s" % name)
 
-    click.echo(
-        "\n[SKIP] Following file(s) on [%s] have not been synced to [%s]"
-        % (to_name, from_name)
-    )
+    if len(not_restored_list):
+        click.echo(
+            "[SKIP] Following file(s) on [%s] have not been synced to [%s]"
+            % (to_name, from_name)
+        )
+
     for name in not_restored_list:
         click.echo("\t%s" % name)
 
-    click.echo("")
-    click.echo("✅  Synced files from [%s] to [%s]" % (from_name, to_name))
-    click.echo("")
 
+def execute_action(action, success_message, fail_message, verbose_error_logging=False):
+    try:
+        success = action()
+    except:
+        if verbose_error_logging:
+            print(traceback.format_exc())
+        success = False
 
-def execute_action(
-    action, progress_message, success_message, fail_message, verbose_error_logging=False
-):
-    with yaspin(text=progress_message, color="green") as spinner:
-        try:
-            success = action()
-        except:
-            if verbose_error_logging:
-                print(traceback.format_exc())
-            success = False
+    if success:
+        click.echo(success_message)
+    else:
+        raise click.ClickException(fail_message)
 
-        if success:
-            spinner.write(success_message)
-            spinner.ok("✅ ")
-        else:
-            spinner.fail("💥 ")
-            raise click.ClickException(fail_message)
-
-        return success
+    return success
 
 
 def olignore_keep_list(olignore_path):
@@ -556,12 +542,11 @@ def olignore_keep_list(olignore_path):
     # get list of files recursively (ignore .* files)
     files = glob.glob("**", recursive=True)
 
-    click.echo("=" * 40)
     if not os.path.isfile(olignore_path):
-        click.echo("\nNotice: .olignore file does not exist, will sync all items.")
+        click.echo("Notice: .olignore file does not exist, will sync all items.")
         keep_list = files
     else:
-        click.echo("\n.olignore: using %s to filter items" % olignore_path)
+        click.echo(".olignore: using %s to filter items" % olignore_path)
         with open(olignore_path, "r") as f:
             ignore_pattern = f.read().splitlines()
 

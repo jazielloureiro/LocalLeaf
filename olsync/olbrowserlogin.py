@@ -35,6 +35,10 @@ class OlBrowserLogin:
         self._settings = Settings()
 
     def _create_main_window(self):
+        web_engine_context_log = QLoggingCategory("qt.webenginecontext")
+        web_engine_context_log.setFilterRules("*.info=false")
+        web_engine_context_log.setFilterRules("*.warning=false")
+
         self._window = QMainWindow()
 
         self._window.webview = QWebEngineView()
@@ -89,8 +93,6 @@ class OlBrowserLogin:
             self._cookies[cookie_name] = cookie.value().data().decode("utf-8")
 
     def login(self):
-        QLoggingCategory.setFilterRules("qt.webenginecontext.info=false")
-
         app = QApplication([])
         self._create_main_window()
         app.exec()
