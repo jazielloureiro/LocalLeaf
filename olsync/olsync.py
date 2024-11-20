@@ -21,14 +21,8 @@ import fnmatch
 import traceback
 from pathlib import Path
 
-try:
-    # Import for pip installation / wheel
-    from olsync.olclient import OverleafClient
-    from olsync.olbrowserlogin import OlBrowserLogin
-except ImportError:
-    # Import for development
-    from olclient import OverleafClient
-    from olbrowserlogin import OlBrowserLogin
+from olclient import OverleafClient
+from olbrowserlogin import OlBrowserLogin
 
 
 @click.group()
@@ -173,7 +167,7 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         create_file_at_to=lambda name: write_file(name, zip_file.read(name)),
         delete_file_at_to=lambda name: delete_file(name),
         create_file_at_from=lambda name: overleaf_client.upload_file(
-            project["id"], project_infos, name, os.path.getsize(name), open(name, 'rb')),
+            project["id"], project_infos, name, open(name, 'rb')),
         from_exists_in_to=lambda name: os.path.isfile(name),
         from_equal_to_to=lambda name: open(name, 'rb').read() == zip_file.read(name),
         from_newer_than_to=lambda name: dateutil.parser.isoparse(project["lastUpdated"]).timestamp() >
@@ -234,7 +228,7 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         files_from=olignore_keep_list(olignore_path),
         deleted_files=[f for f in zip_file.namelist() if f not in olignore_keep_list(olignore_path)],
         create_file_at_to=lambda name: overleaf_client.upload_file(
-            project["id"], project_infos, name, os.path.getsize(name), open(name, 'rb')),
+            project["id"], project_infos, name, open(name, 'rb')),
         delete_file_at_to=lambda name: overleaf_client.delete_file(project["id"], project_infos, name),
         create_file_at_from=lambda name: write_file(name, zip_file.read(name)),
         from_exists_in_to=lambda name: name in zip_file.namelist(),
@@ -244,6 +238,7 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         from_name="local",
         to_name="remote",
         verbose=verbose)
+
 
 def login_handler(path):
     store = OlBrowserLogin().login()
