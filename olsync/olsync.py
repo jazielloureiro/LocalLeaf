@@ -24,101 +24,18 @@ from pathlib import Path
 try:
     # Import for pip installation / wheel
     from olsync.olclient import OverleafClient
-    import olsync.olbrowserlogin as olbrowserlogin
+    from olsync.olbrowserlogin import OlBrowserLogin
 except ImportError:
     # Import for development
     from olclient import OverleafClient
-    import olbrowserlogin
+    from olbrowserlogin import OlBrowserLogin
 
 
-@click.group(invoke_without_command=True)
-@click.option('-l', '--local-only', 'local', is_flag=True, help="Sync local project files to Overleaf only.")
-@click.option('-r', '--remote-only', 'remote', is_flag=True,
-              help="Sync remote project files from Overleaf to local file system only.")
-@click.option('-n', '--name', 'project_name', default="",
-              help="Specify the Overleaf project name instead of the default name of the sync directory.")
-@click.option('--store-path', 'cookie_path', default=".olauth", type=click.Path(exists=False),
-              help="Relative path to load the persisted Overleaf cookie.")
-@click.option('-p', '--path', 'sync_path', default=".", type=click.Path(exists=True),
-              help="Path of the project to sync.")
-@click.option('-i', '--olignore', 'olignore_path', default=".olignore", type=click.Path(exists=False),
-              help="Path to the .olignore file relative to sync path (ignored if syncing from remote to local). See "
-                   "fnmatch / unix filename pattern matching for information on how to use it.")
-@click.option('-v', '--verbose', 'verbose', is_flag=True, help="Enable extended error logging.")
-@click.version_option(package_name='overleaf-sync')
-@click.pass_context
-def main(ctx, local, remote, project_name, cookie_path, sync_path, olignore_path, verbose):
-    if ctx.invoked_subcommand is None:
-        if not os.path.isfile(cookie_path):
-            raise click.ClickException(
-                "Persisted Overleaf cookie not found. Please login or check store path.")
+@click.group()
+def cli():
+    pass
 
-        with open(cookie_path, 'rb') as f:
-            store = pickle.load(f)
-
-        overleaf_client = OverleafClient(store["cookie"], store["csrf"])
-
-        # Change the current directory to the specified sync path
-        os.chdir(sync_path)
-
-        project_name = project_name or os.path.basename(os.getcwd())
-        project = execute_action(
-            lambda: overleaf_client.get_project(project_name),
-            "Querying project",
-            "Project queried successfully.",
-            "Project could not be queried.",
-            verbose)
-
-        project_infos = execute_action(
-            lambda: overleaf_client.get_project_infos(project["id"]),
-            "Querying project details",
-            "Project details queried successfully.",
-            "Project details could not be queried.",
-            verbose)
-
-        zip_file = execute_action(
-            lambda: zipfile.ZipFile(io.BytesIO(
-                overleaf_client.download_project(project["id"]))),
-            "Downloading project",
-            "Project downloaded successfully.",
-            "Project could not be downloaded.",
-            verbose)
-
-        sync = not (local or remote)
-
-        if remote or sync:
-            sync_func(
-                files_from=zip_file.namelist(),
-                deleted_files=[f for f in olignore_keep_list(olignore_path) if f not in zip_file.namelist() and not sync],
-                create_file_at_to=lambda name: write_file(name, zip_file.read(name)),
-                delete_file_at_to=lambda name: delete_file(name),
-                create_file_at_from=lambda name: overleaf_client.upload_file(
-                    project["id"], project_infos, name, os.path.getsize(name), open(name, 'rb')),
-                from_exists_in_to=lambda name: os.path.isfile(name),
-                from_equal_to_to=lambda name: open(name, 'rb').read() == zip_file.read(name),
-                from_newer_than_to=lambda name: dateutil.parser.isoparse(project["lastUpdated"]).timestamp() >
-                                                os.path.getmtime(name),
-                from_name="remote",
-                to_name="local",
-                verbose=verbose)
-        if local or sync:
-            sync_func(
-                files_from=olignore_keep_list(olignore_path),
-                deleted_files=[f for f in zip_file.namelist() if f not in olignore_keep_list(olignore_path) and not sync],
-                create_file_at_to=lambda name: overleaf_client.upload_file(
-                    project["id"], project_infos, name, os.path.getsize(name), open(name, 'rb')),
-                delete_file_at_to=lambda name: overleaf_client.delete_file(project["id"], project_infos, name),
-                create_file_at_from=lambda name: write_file(name, zip_file.read(name)),
-                from_exists_in_to=lambda name: name in zip_file.namelist(),
-                from_equal_to_to=lambda name: open(name, 'rb').read() == zip_file.read(name),
-                from_newer_than_to=lambda name: os.path.getmtime(name) > dateutil.parser.isoparse(
-                    project["lastUpdated"]).timestamp(),
-                from_name="local",
-                to_name="remote",
-                verbose=verbose)
-
-
-@main.command()
+@cli.command(name="login")
 @click.option('--path', 'cookie_path', default=".olauth", type=click.Path(exists=False),
               help="Path to store the persisted Overleaf cookie.")
 @click.option('-v', '--verbose', 'verbose', is_flag=True, help="Enable extended error logging.")
@@ -133,7 +50,7 @@ def login(cookie_path, verbose):
                    "Login failed. Please try again.", verbose)
 
 
-@main.command(name='list')
+@cli.command(name='list')
 @click.option('--store-path', 'cookie_path', default=".olauth", type=click.Path(exists=False),
               help="Relative path to load the persisted Overleaf cookie.")
 @click.option('-v', '--verbose', 'verbose', is_flag=True, help="Enable extended error logging.")
@@ -160,7 +77,7 @@ def list_projects(cookie_path, verbose):
                    "Querying all projects failed. Please try again.", verbose)
 
 
-@main.command(name='download')
+@cli.command(name='download')
 @click.option('-n', '--name', 'project_name', default="",
               help="Specify the Overleaf project name instead of the default name of the sync directory.")
 @click.option('--download-path', 'download_path', default=".", type=click.Path(exists=True))
@@ -204,7 +121,7 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
 
 
 def login_handler(path):
-    store = olbrowserlogin.login()
+    store = OlBrowserLogin().login()
     if store is None:
         return False
     with open(path, 'wb+') as f:
@@ -386,4 +303,4 @@ def olignore_keep_list(olignore_path):
 
 
 if __name__ == "__main__":
-    main()
+    cli()
