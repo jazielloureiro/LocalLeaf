@@ -21,8 +21,8 @@ import fnmatch
 import traceback
 from pathlib import Path
 
-from olclient import OverleafClient
-from olbrowserlogin import OlBrowserLogin
+from olsync.olclient import OverleafClient
+from olsync.olbrowserlogin import OlBrowserLogin
 
 
 @click.group()

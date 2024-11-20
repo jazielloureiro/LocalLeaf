@@ -22,4 +22,4 @@ requires = [
 keywords = "overleaf sync latex tex"
 
 [tool.flit.scripts]
-ols = "olsync.olsync:main"
+ols = "olsync.olsync:cli"

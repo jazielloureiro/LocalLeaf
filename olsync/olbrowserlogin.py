@@ -19,7 +19,7 @@ from PySide6.QtWebEngineCore import (
     QWebEngineSettings,
 )
 
-from settings import Settings
+from olsync.settings import Settings
 
 
 class OlBrowserLogin:

@@ -17,7 +17,7 @@ import time
 from bs4 import BeautifulSoup
 from socketIO_client import SocketIO
 
-from settings import Settings
+from olsync.settings import Settings
 
 
 class OverleafClient:
