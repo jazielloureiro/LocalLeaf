@@ -1,15 +1,3 @@
-"""Overleaf Two-Way Sync Tool"""
-
-##################################################
-# MIT License
-##################################################
-# File: olsync.py
-# Description: Overleaf Two-Way Sync
-# Author: Moritz Glöckl
-# License: MIT
-# Version: 1.2.0
-##################################################
-
 import click
 import os
 import pickle
@@ -21,8 +9,8 @@ import fnmatch
 import traceback
 from pathlib import Path
 
-from olsync.olclient import OverleafClient
-from olsync.olbrowserlogin import OlBrowserLogin
+from localleaf.client import OverleafClient
+from localleaf.browser import OverleafBrowser
 
 
 @click.group()
@@ -348,7 +336,7 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
 
 
 def login_handler(path):
-    store = OlBrowserLogin().login()
+    store = OverleafBrowser().login()
     if store is None:
         return False
     with open(path, "wb+") as f:

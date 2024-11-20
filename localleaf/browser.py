@@ -1,15 +1,3 @@
-"""Ol Browser Login Utility"""
-
-##################################################
-# MIT License
-##################################################
-# File: olbrowserlogin.py
-# Description: Overleaf Browser Login Utility
-# Author: Moritz Glöckl
-# License: MIT
-# Version: 1.2.0
-##################################################
-
 from PySide6.QtCore import QCoreApplication, QLoggingCategory, QUrl
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -19,12 +7,12 @@ from PySide6.QtWebEngineCore import (
     QWebEngineSettings,
 )
 
-from olsync.settings import Settings
+from localleaf.settings import Settings
 
 
-class OlBrowserLogin:
+class OverleafBrowser:
     """
-    Overleaf Browser Login Utility
+    Overleaf Browser Utility
     Opens a browser window to securely login the user and returns relevant login data.
     """
 

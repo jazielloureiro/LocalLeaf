@@ -1,11 +1,6 @@
-# Overleaf-Sync
-### Easy Overleaf Two-Way Synchronization
-
-![Made In Austria](https://img.shields.io/badge/Made%20in-Austria-%23ED2939.svg) ![PyPI - License](https://img.shields.io/pypi/l/overleaf-sync.svg) ![PyPI](https://img.shields.io/pypi/v/overleaf-sync.svg) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/overleaf-sync.svg)
+# LocalLeaf
 
 This tool provides an easy way to synchronize Overleaf projects from and to your local computer. No paid account necessary.
-
-----
 
 ## Features
 - Sync your locally modified `.tex` (and other) files to your Overleaf projects
@@ -16,24 +11,18 @@ This tool provides an easy way to synchronize Overleaf projects from and to your
 
 ## How To Use
 ### Install
-The package is available via [PyPI](https://pypi.org/project/overleaf-sync/). Just run:
-
-```
-moritz@github:~/test$ pip3 install overleaf-sync
-```
-
-That's it! Depending on your local Python installation, you might need to use `pip` instead of `pip3`.
+TODO
 
 ### Prerequisites
-- Create your project on [Overleaf](https://www.overleaf.com/project), for example a project named `test`. Overleaf-sync is not able to create projects (yet).
+- Create your project on [Overleaf](https://www.overleaf.com/project), for example a project named `test`. localleaf is not able to create projects (yet).
 - Create a folder, preferably with the same name as the project (`test`) on your computer.
 - Execute the script from that folder (`test`).
-- If you do not specify the project name, overleaf-sync uses the current folder's name as the project name.
+- If you do not specify the project name, localleaf uses the current folder's name as the project name.
 
 ### Usage
 #### Login
 ```
-moritz@github:~/test$ ols login [--path]
+lleaf login [--path]
 Login successful. Cookie persisted as `.olauth`. You may now sync your project.
 ```
 
@@ -45,51 +34,27 @@ Keep the `.olauth` file save, as it can be used to log in into your account.
 
 ### Listing all projects
 ```
-moritz@github:~/test$ ols list [--store-path -v/--verbose]
+lleaf list [--store-path -v/--verbose]
 10/31/2021, 01:23:45 - Project A
 09/21/2020, 01:23:45 - Project B
 08/11/2019, 01:23:45 - Project C
 07/01/2018, 01:23:45 - Project D
 ```
 
-Use `ols list` to conveniently list all projects in your account available for syncing. 
+Use `lleaf list` to conveniently list all projects in your account available for syncing. 
 
 ### Downloading project's PDF
 ```
-moritz@github:~/test$ ols download [--name --download-path --store-path -v/--verbose]
+lleaf download [--name --download-path --store-path -v/--verbose]
 ```
 
-Use `ols download` to compile and download your project's PDF. Specify a download path if you do not want to store the PDF file in the current folder. Currently only downloads the first PDF file it finds.
+Use `lleaf download` to compile and download your project's PDF. Specify a download path if you do not want to store the PDF file in the current folder. Currently only downloads the first PDF file it finds.
 
-### Syncing
-```
-moritz@github:~/test$ ols [-l/--local-only -r/--remote-only --store-path -p/--path -i/--olignore]
-```
+### Pulling changes
+TODO
 
-Just calling `ols` will two-way sync your project. When there are changes both locally, and remotely you will be asked which file to keep. Using the `-l` or `-r` option you can specify to either sync local project files to Overleaf only or Overleaf files to local ones only respectively. When using these options you can also sync deleted files. If a file has been deleted it can either be deleted on the target (remote when `-l`, local when `-r`) as well, restored on the source (local when `-l`, remote when `-r`) or ignored.
-
-The option `--store-path` specifies the path of the cookie file created by the `login` command. If you did not change its path, you do not need to specify this argument. The `-p/--path` option allows you to specify a different sync folder than the one you're calling `ols` from. The `-i/--olignore` option allows you to specify the path of an `.olignore` file. It uses `fnmatch` internally, so it may have some similarity to `.gitignore` but doesn't work exactly the same. For example, if you wish to exclude a specific folder named `out`, you need to specify it as `out/*`. See [here](https://docs.python.org/3/library/fnmatch.html) for more information.
-
-Sample Output:
-
-```
-Project queried successfully.
-✅  Querying project
-Project downloaded successfully.
-✅  Downloading project
-
-Syncing files from remote to local
-====================
-
-[SYNCING] report.tex
-report.tex does not exist on local. Creating file.
-
-[SYNCING] other-report.tex
-other-report.tex does not exist on local. Creating file.
-
-
-✅  Syncing files from remote to local
-```
+### Pushing changes
+TODO
 
 ## Known Bugs
 - When modifying a file on Overleaf and immediately syncing afterwards, the tool might not detect the changes. Please allow 1-2 minutes after modifying a file on Overleaf before syncing it to your local computer.

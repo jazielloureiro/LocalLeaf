@@ -2,16 +2,25 @@
 requires = ["flit"]
 build-backend = "flit.buildapi"
 
-[tool.flit.metadata]
-module = "olsync"
-dist-name = "overleaf-sync"
-description-file = "README.md"
-author = "Moritz Glöckl"
-author-email = "moritzgloeckl@users.noreply.github.com"
-home-page = "https://github.com/moritzgloeckl/overleaf-sync"
-classifiers = ["License :: OSI Approved :: MIT License", "Intended Audience :: Science/Research", "Programming Language :: Python :: 3"]
+[project]
+name = "localleaf"
+readme = "README.md"
 requires-python = ">=3"
-requires = [
+license = {file = "LICENSE"}
+authors = [
+    {name = "Jaziel Loureiro", email = "jazielloureiro17@gmail.com"},
+    {name = "Moritz Glöckl", email = "moritzgloeckl@users.noreply.github.com"},
+]
+maintainers = [
+    {name = "Jaziel Loureiro", email = "jazielloureiro17@gmail.com"},
+]
+keywords = ["overleaf", "local", "sync", "latex", "tex"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3"
+]
+dependencies = [
     "beautifulsoup4==4.11.1",
     "certifi==2024.8.30",
     "charset-normalizer==3.4.0",
@@ -29,7 +38,10 @@ requires = [
     "urllib3==2.2.3",
     "websocket-client==1.8.0"
 ]
-keywords = "overleaf sync latex tex"
+dynamic = ["version", "description"]
 
-[tool.flit.scripts]
-ols = "olsync.olsync:cli"
+[project.urls]
+Source = "https://github.com/jazielloureiro/LocalLeaf"
+
+[project.scripts]
+lleaf = "localleaf.cli:cli"

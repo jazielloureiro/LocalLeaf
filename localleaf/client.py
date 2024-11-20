@@ -1,15 +1,3 @@
-"""Overleaf Client"""
-
-##################################################
-# MIT License
-##################################################
-# File: olclient.py
-# Description: Overleaf API Wrapper
-# Author: Moritz Glöckl
-# License: MIT
-# Version: 1.2.0
-##################################################
-
 import json
 import requests
 import time
@@ -17,7 +5,7 @@ import time
 from bs4 import BeautifulSoup
 from socketIO_client import SocketIO
 
-from olsync.settings import Settings
+from localleaf.settings import Settings
 
 
 class OverleafClient:
