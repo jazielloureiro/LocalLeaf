@@ -1,4 +1,5 @@
 """Overleaf Client"""
+
 ##################################################
 # MIT License
 ##################################################
@@ -29,7 +30,7 @@ class OverleafClient:
     @staticmethod
     def filter_projects(json_content, more_attrs=None):
         more_attrs = more_attrs or {}
-        for p in json_content['projects']:
+        for p in json_content["projects"]:
             if not p.get("archived") and not p.get("trashed"):
                 if all(p.get(k) == v for k, v in more_attrs.items()):
                     yield p
@@ -48,29 +49,37 @@ class OverleafClient:
         """
 
         get_login = requests.get(self._settings.login_url())
-        self._csrf = BeautifulSoup(get_login.content, 'html.parser').find(
-            'input', {'name': '_csrf'}).get('value')
-        login_json = {
-            "_csrf": self._csrf,
-            "email": username,
-            "password": password
-        }
-        post_login = requests.post(self._settings.login_url(), json=login_json,
-                               cookies=get_login.cookies)
+        self._csrf = (
+            BeautifulSoup(get_login.content, "html.parser")
+            .find("input", {"name": "_csrf"})
+            .get("value")
+        )
+        login_json = {"_csrf": self._csrf, "email": username, "password": password}
+        post_login = requests.post(
+            self._settings.login_url(), json=login_json, cookies=get_login.cookies
+        )
 
         # On a successful authentication the Overleaf API returns a new authenticated cookie.
         # If the cookie is different than the cookie of the GET request the authentication was successful
-        if post_login.status_code == 200 and get_login.cookies["overleaf_session2"] != post_login.cookies[
-            "overleaf_session2"]:
+        if (
+            post_login.status_code == 200
+            and get_login.cookies["overleaf_session2"]
+            != post_login.cookies["overleaf_session2"]
+        ):
             self._cookie = post_login.cookies
 
             # Enrich cookie with GCLB cookie from GET request above
-            self._cookie['GCLB'] = get_login.cookies['GCLB']
+            self._cookie["GCLB"] = get_login.cookies["GCLB"]
 
             # CSRF changes after making the login request, new CSRF token will be on the projects page
-            projects_page = requests.get(self._settings.project_url(), cookies=self._cookie)
-            self._csrf = BeautifulSoup(projects_page.content, 'html.parser').find('meta', {'name': 'ol-csrfToken'}) \
-                .get('content')
+            projects_page = requests.get(
+                self._settings.project_url(), cookies=self._cookie
+            )
+            self._csrf = (
+                BeautifulSoup(projects_page.content, "html.parser")
+                .find("meta", {"name": "ol-csrfToken"})
+                .get("content")
+            )
 
             return {"cookie": self._cookie, "csrf": self._csrf}
 
@@ -81,7 +90,10 @@ class OverleafClient:
         """
         projects_page = requests.get(self._settings.project_url(), cookies=self._cookie)
         json_content = json.loads(
-            BeautifulSoup(projects_page.content, 'html.parser').find('meta', {'name': 'ol-prefetchedProjectsBlob'}).get('content'))
+            BeautifulSoup(projects_page.content, "html.parser")
+            .find("meta", {"name": "ol-prefetchedProjectsBlob"})
+            .get("content")
+        )
         return list(OverleafClient.filter_projects(json_content))
 
     def get_project(self, project_name):
@@ -93,8 +105,13 @@ class OverleafClient:
 
         projects_page = requests.get(self._settings.project_url(), cookies=self._cookie)
         json_content = json.loads(
-            BeautifulSoup(projects_page.content, 'html.parser').find('meta', {'name': 'ol-prefetchedProjectsBlob'}).get('content'))
-        return next(OverleafClient.filter_projects(json_content, {"name": project_name}), None)
+            BeautifulSoup(projects_page.content, "html.parser")
+            .find("meta", {"name": "ol-prefetchedProjectsBlob"})
+            .get("content")
+        )
+        return next(
+            OverleafClient.filter_projects(json_content, {"name": project_name}), None
+        )
 
     def download_project(self, project_id):
         """
@@ -102,7 +119,9 @@ class OverleafClient:
         Params: project_id, the id of the project
         Returns: bytes string (zip file)
         """
-        r = requests.get(self._settings.download_url(project_id), stream=True, cookies=self._cookie)
+        r = requests.get(
+            self._settings.download_url(project_id), stream=True, cookies=self._cookie
+        )
         return r.content
 
     def create_folder(self, project_id, parent_folder_id, folder_name):
@@ -117,14 +136,14 @@ class OverleafClient:
         Returns: folder id or None
         """
 
-        params = {
-            "parent_folder_id": parent_folder_id,
-            "name": folder_name
-        }
-        headers = {
-            "X-Csrf-Token": self._csrf
-        }
-        r = requests.post(self._settings.folder_url(project_id), cookies=self._cookie, headers=headers, json=params)
+        params = {"parent_folder_id": parent_folder_id, "name": folder_name}
+        headers = {"X-Csrf-Token": self._csrf}
+        r = requests.post(
+            self._settings.folder_url(project_id),
+            cookies=self._cookie,
+            headers=headers,
+            json=params,
+        )
 
         if r.ok:
             return json.loads(r.content)
@@ -149,28 +168,26 @@ class OverleafClient:
         def set_project_infos(project_infos_dict):
             # Set project_infos variable in outer scope
             nonlocal project_infos
-            project_infos = project_infos_dict['project']
+            project_infos = project_infos_dict["project"]
 
         # Convert cookie from CookieJar to string
-        cookie = "GCLB={}; overleaf_session2={}" \
-            .format(
-            self._cookie["GCLB"],
-            self._cookie["overleaf_session2"]
+        cookie = "GCLB={}; overleaf_session2={}".format(
+            self._cookie["GCLB"], self._cookie["overleaf_session2"]
         )
 
         # Connect to Overleaf Socket.IO, send a time parameter and the cookies
         socket_io = SocketIO(
             self._settings.base_url(),
-            params={'t': int(time.time()), 'projectId': project_id},
-            headers={'Cookie': cookie}
+            params={"t": int(time.time()), "projectId": project_id},
+            headers={"Cookie": cookie},
         )
 
         # Wait until we connect to the socket
-        socket_io.on('connect', lambda: None)
+        socket_io.on("connect", lambda: None)
         socket_io.wait_for_callbacks()
 
         # Send the joinProject event and receive the project infos
-        socket_io.on('joinProjectResponse', set_project_infos)
+        socket_io.on("joinProjectResponse", set_project_infos)
         while not project_infos:
             socket_io.wait(1)
 
@@ -193,36 +210,47 @@ class OverleafClient:
         """
 
         # Set the folder_id to the id of the root folder
-        folder_id = project_infos['rootFolder'][0]['_id']
+        folder_id = project_infos["rootFolder"][0]["_id"]
 
         # The file name contains path separators, check folders
-        if '/' in file_name:
-            local_folders = file_name.split('/')[:-1]  # Remove last item since this is the file name
-            current_overleaf_folder = project_infos['rootFolder'][0]['folders']  # Set the current remote folder
+        if "/" in file_name:
+            local_folders = file_name.split("/")[
+                :-1
+            ]  # Remove last item since this is the file name
+            current_overleaf_folder = project_infos["rootFolder"][0][
+                "folders"
+            ]  # Set the current remote folder
 
             for local_folder in local_folders:
                 exists_on_remote = False
                 for remote_folder in current_overleaf_folder:
                     # Check if the folder exists on remote, continue with the new folder structure
-                    if local_folder.lower() == remote_folder['name'].lower():
+                    if local_folder.lower() == remote_folder["name"].lower():
                         exists_on_remote = True
-                        folder_id = remote_folder['_id']
-                        current_overleaf_folder = remote_folder['folders']
+                        folder_id = remote_folder["_id"]
+                        current_overleaf_folder = remote_folder["folders"]
                         break
                 # Create the folder if it doesn't exist
                 if not exists_on_remote:
                     new_folder = self.create_folder(project_id, folder_id, local_folder)
                     current_overleaf_folder.append(new_folder)
-                    folder_id = new_folder['_id']
-                    current_overleaf_folder = new_folder['folders']
+                    folder_id = new_folder["_id"]
+                    current_overleaf_folder = new_folder["folders"]
 
         headers = {"X-CSRF-TOKEN": self._csrf}
         params = {"folder_id": folder_id}
-        data = {"name": file_name.split('/')[-1]}
+        data = {"name": file_name.split("/")[-1]}
         files = {"qqfile": file.read()}
 
         # Upload the file to the predefined folder
-        r = requests.post(self._settings.upload_url(project_id), cookies=self._cookie, headers=headers, data=data, params=params, files=files)
+        r = requests.post(
+            self._settings.upload_url(project_id),
+            cookies=self._cookie,
+            headers=headers,
+            data=data,
+            params=params,
+            files=files,
+        )
 
         return r.status_code == str(200) and json.loads(r.content)["success"]
 
@@ -240,30 +268,50 @@ class OverleafClient:
         file = None
 
         # The file name contains path separators, check folders
-        if '/' in file_name:
-            local_folders = file_name.split('/')[:-1]  # Remove last item since this is the file name
-            current_overleaf_folder = project_infos['rootFolder'][0]['folders']  # Set the current remote folder
+        if "/" in file_name:
+            local_folders = file_name.split("/")[
+                :-1
+            ]  # Remove last item since this is the file name
+            current_overleaf_folder = project_infos["rootFolder"][0][
+                "folders"
+            ]  # Set the current remote folder
 
             for local_folder in local_folders:
                 for remote_folder in current_overleaf_folder:
-                    if local_folder.lower() == remote_folder['name'].lower():
-                        file = next((v for v in remote_folder['docs'] if v['name'] == file_name.split('/')[-1]),
-                                    None)
-                        current_overleaf_folder = remote_folder['folders']
+                    if local_folder.lower() == remote_folder["name"].lower():
+                        file = next(
+                            (
+                                v
+                                for v in remote_folder["docs"]
+                                if v["name"] == file_name.split("/")[-1]
+                            ),
+                            None,
+                        )
+                        current_overleaf_folder = remote_folder["folders"]
                         break
         # File is in root folder
         else:
-            file = next((v for v in project_infos['rootFolder'][0]['docs'] if v['name'] == file_name), None)
+            file = next(
+                (
+                    v
+                    for v in project_infos["rootFolder"][0]["docs"]
+                    if v["name"] == file_name
+                ),
+                None,
+            )
 
         # File not found!
         if file is None:
             return False
 
-        headers = {
-            "X-Csrf-Token": self._csrf
-        }
+        headers = {"X-Csrf-Token": self._csrf}
 
-        r = requests.delete(self._settings.delete_url(project_id, file['_id']), cookies=self._cookie, headers=headers, json={})
+        r = requests.delete(
+            self._settings.delete_url(project_id, file["_id"]),
+            cookies=self._cookie,
+            headers=headers,
+            json={},
+        )
 
         return r.status_code == str(204)
 
@@ -276,23 +324,25 @@ class OverleafClient:
 
         Returns: PDF file name and content on success
         """
-        headers = {
-            "X-Csrf-Token": self._csrf
-        }
+        headers = {"X-Csrf-Token": self._csrf}
 
-        params = {
-            "enable_pdf_caching": True
-        }
+        params = {"enable_pdf_caching": True}
 
         body = {
             "check": "silent",
             "draft": False,
             "incrementalCompilesEnabled": True,
             "rootDoc_id": "",
-            "stopOnFirstError": False
+            "stopOnFirstError": False,
         }
 
-        r = requests.post(self._settings.compile_url(project_id), cookies=self._cookie, headers=headers, params=params, json=body)
+        r = requests.post(
+            self._settings.compile_url(project_id),
+            cookies=self._cookie,
+            headers=headers,
+            params=params,
+            json=body,
+        )
 
         if not r.ok:
             raise requests.HTTPError()
@@ -302,11 +352,15 @@ class OverleafClient:
         if compile_result["status"] != "success":
             raise requests.HTTPError()
 
-        pdf_file = next(v for v in compile_result['outputFiles'] if v['type'] == 'pdf')
+        pdf_file = next(v for v in compile_result["outputFiles"] if v["type"] == "pdf")
 
-        download_req = requests.get(self._settings.base_url() + pdf_file['url'], cookies=self._cookie, headers=headers)
+        download_req = requests.get(
+            self._settings.base_url() + pdf_file["url"],
+            cookies=self._cookie,
+            headers=headers,
+        )
 
         if download_req.ok:
-            return pdf_file['path'], download_req.content
+            return pdf_file["path"], download_req.content
 
         return None

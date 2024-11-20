@@ -1,4 +1,5 @@
 """Ol Browser Login Utility"""
+
 ##################################################
 # MIT License
 ##################################################
@@ -12,7 +13,11 @@
 from PySide6.QtCore import QCoreApplication, QLoggingCategory, QUrl
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings
+from PySide6.QtWebEngineCore import (
+    QWebEnginePage,
+    QWebEngineProfile,
+    QWebEngineSettings,
+)
 
 from settings import Settings
 
@@ -28,7 +33,7 @@ class OlBrowserLogin:
         self._csrf = ""
         self._login_success = False
         self._settings = Settings()
-    
+
     def _create_main_window(self):
         self._window = QMainWindow()
 
@@ -37,9 +42,13 @@ class OlBrowserLogin:
         self._window.profile = QWebEngineProfile(self._window.webview)
         self._window.cookie_store = self._window.profile.cookieStore()
         self._window.cookie_store.cookieAdded.connect(self._handle_cookie_added)
-        self._window.profile.setPersistentCookiesPolicy(QWebEngineProfile.NoPersistentCookies)
+        self._window.profile.setPersistentCookiesPolicy(
+            QWebEngineProfile.NoPersistentCookies
+        )
 
-        self._window.profile.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+        self._window.profile.settings().setAttribute(
+            QWebEngineSettings.JavascriptEnabled, True
+        )
 
         webpage = QWebEnginePage(self._window.profile, self._window)
         self._window.webview.setPage(webpage)
@@ -53,26 +62,34 @@ class OlBrowserLogin:
     def _handle_login_load_finished(self):
         def callback(result):
             self._window.webview.load(QUrl.fromUserInput(result))
-            self._window.webview.loadFinished.connect(self._handle_project_load_finished)
+            self._window.webview.loadFinished.connect(
+                self._handle_project_load_finished
+            )
 
         if self._window.webview.url().toString() == self._settings.project_url():
-            self._window.webview.page().runJavaScript("document.getElementsByClassName('dash-cell-name')[1].firstChild.href", 0, callback)
+            self._window.webview.page().runJavaScript(
+                "document.getElementsByClassName('dash-cell-name')[1].firstChild.href",
+                0,
+                callback,
+            )
 
     def _handle_project_load_finished(self):
         def callback(result):
             self._csrf = result
             self._login_success = True
             QCoreApplication.quit()
-        
-        self._window.webview.page().runJavaScript("document.getElementsByName('ol-csrfToken')[0].content", 0, callback)
+
+        self._window.webview.page().runJavaScript(
+            "document.getElementsByName('ol-csrfToken')[0].content", 0, callback
+        )
 
     def _handle_cookie_added(self, cookie):
-        cookie_name = cookie.name().data().decode('utf-8')
+        cookie_name = cookie.name().data().decode("utf-8")
         if cookie_name in ["overleaf_session2", "GCLB"]:
-            self._cookies[cookie_name] = cookie.value().data().decode('utf-8')
+            self._cookies[cookie_name] = cookie.value().data().decode("utf-8")
 
     def login(self):
-        QLoggingCategory.setFilterRules('qt.webenginecontext.info=false')
+        QLoggingCategory.setFilterRules("qt.webenginecontext.info=false")
 
         app = QApplication([])
         self._create_main_window()
