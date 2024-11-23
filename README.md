@@ -11,7 +11,13 @@ This tool provides an easy way to synchronize Overleaf projects from and to your
 
 ## How To Use
 ### Install
-TODO
+The package is available via [PyPI](https://pypi.org/project/localleaf/). Just run:
+
+```
+pip3 install localleaf
+```
+
+That's it! Depending on your local Python installation, you might need to use `pip` instead of `pip3`.
 
 ### Prerequisites
 - Create your project on [Overleaf](https://www.overleaf.com/project), for example a project named `test`. localleaf is not able to create projects (yet).
@@ -22,39 +28,41 @@ TODO
 ### Usage
 #### Login
 ```
-lleaf login [--path]
-Login successful. Cookie persisted as `.olauth`. You may now sync your project.
+lleaf [--cookie-path -v/--verbose] login
 ```
 
 Logging in will be handled by a mini web browser opening on your device (using Qt5). You can then enter your username and password securely on the official Overleaf website. You might get asked to solve a CAPTCHA in the process. Your credentials are sent to Overleaf over HTTPS.
 
-It then stores your *cookie* (**not** your login credentials) in a hidden file called `.olauth` in the same folder you run the command from. It is possible to store the cookie elsewhere using the `--path` option. The cookie file will not be synced to or from Overleaf.
+It then stores your *cookie* (**not** your login credentials) in a hidden file called `.olauth` in your system configuration directory. It is possible to store the cookie elsewhere using the `--cookie-path` option. The cookie file will not be synced to or from Overleaf.
 
 Keep the `.olauth` file save, as it can be used to log in into your account.
 
 ### Listing all projects
 ```
-lleaf list [--store-path -v/--verbose]
-10/31/2021, 01:23:45 - Project A
-09/21/2020, 01:23:45 - Project B
-08/11/2019, 01:23:45 - Project C
-07/01/2018, 01:23:45 - Project D
+lleaf [--cookie-path -v/--verbose] list
 ```
 
 Use `lleaf list` to conveniently list all projects in your account available for syncing. 
 
 ### Downloading project's PDF
 ```
-lleaf download [--name --download-path --store-path -v/--verbose]
+lleaf [--cookie-path -v/--verbose] download [-n/--name --download-path]
 ```
 
-Use `lleaf download` to compile and download your project's PDF. Specify a download path if you do not want to store the PDF file in the current folder. Currently only downloads the first PDF file it finds.
+Use `lleaf download` to compile and download your project's PDF. Specify a download path if you do not want to store the PDF file in the current folder. Currently only downloads the first PDF file it finds. Using the `-n/--name` option allows you to specify a different Overleaf project name than the name of the folder you're calling `lleaf` from.
 
-### Pulling changes
-TODO
+### Pulling and pushing changes
+```
+lleaf [--cookie-path -v/--verbose] pull [-n/--name -p/--path -i/--olignore]
+```
 
-### Pushing changes
-TODO
+```
+lleaf [--cookie-path -v/--verbose] push [-n/--name -p/--path -i/--olignore]
+```
+
+Use `lleaf pull` to pull your Overleaf project files to your local project and `lleaf push` to push your local project files to your Overleaf project. When there are changes both locally, and remotely you will be asked which file to keep. If a file has been deleted on the source it can either be deleted on the target as well, restored on the source or ignored.
+
+The `-n/--name` option allows you to specify a different Overleaf project name than the name of the folder you're calling `lleaf` from. The `-p/--path` option allows you to specify a different sync folder than the one you're calling `lleaf` from. The `-i/--olignore` option allows you to specify the path of an `.olignore` file. It uses `fnmatch` internally, so it may have some similarity to `.gitignore` but doesn't work exactly the same. For example, if you wish to exclude a specific folder named `out`, you need to specify it as `out/*`. See [here](https://docs.python.org/3/library/fnmatch.html) for more information.
 
 ## Known Bugs
 - When modifying a file on Overleaf and immediately syncing afterwards, the tool might not detect the changes. Please allow 1-2 minutes after modifying a file on Overleaf before syncing it to your local computer.
