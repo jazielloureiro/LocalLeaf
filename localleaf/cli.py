@@ -31,6 +31,17 @@ def cli(ctx, cookie_path, verbose):
     ctx.obj["cookie_path"] = cookie_path
     ctx.obj["verbose"] = verbose
 
+    if ctx.invoked_subcommand == "login":
+        return
+
+    if not os.path.isfile(cookie_path):
+        raise click.ClickException(
+            "Persisted Overleaf cookie not found. Please login or check store path."
+        )
+
+    with open(cookie_path, "rb") as f:
+        ctx.obj["cookie_data"] = pickle.load(f)
+
 
 @cli.command(name="login")
 @click.pass_context
@@ -64,15 +75,9 @@ def list_projects(ctx):
             )
         return True
 
-    if not os.path.isfile(ctx.obj["cookie_path"]):
-        raise click.ClickException(
-            "Persisted Overleaf cookie not found. Please login or check store path."
-        )
-
-    with open(ctx.obj["cookie_path"], "rb") as f:
-        store = pickle.load(f)
-
-    overleaf_client = OverleafClient(store["cookie"], store["csrf"])
+    overleaf_client = OverleafClient(
+        ctx.obj["cookie_data"]["cookie"], ctx.obj["cookie_data"]["csrf"]
+    )
 
     execute_action(
         query_projects,
@@ -114,15 +119,9 @@ def download_pdf(ctx, project_name, download_path):
 
         return True
 
-    if not os.path.isfile(ctx.obj["cookie_path"]):
-        raise click.ClickException(
-            "Persisted Overleaf cookie not found. Please login or check store path."
-        )
-
-    with open(ctx.obj["cookie_path"], "rb") as f:
-        store = pickle.load(f)
-
-    overleaf_client = OverleafClient(store["cookie"], store["csrf"])
+    overleaf_client = OverleafClient(
+        ctx.obj["cookie_data"]["cookie"], ctx.obj["cookie_data"]["csrf"]
+    )
 
     execute_action(
         download_project_pdf,
@@ -159,15 +158,9 @@ def download_pdf(ctx, project_name, download_path):
 )
 @click.pass_context
 def pull_changes(ctx, project_name, sync_path, olignore_path):
-    if not os.path.isfile(ctx.obj["cookie_path"]):
-        raise click.ClickException(
-            "Persisted Overleaf cookie not found. Please login or check store path."
-        )
-
-    with open(ctx.obj["cookie_path"], "rb") as f:
-        store = pickle.load(f)
-
-    overleaf_client = OverleafClient(store["cookie"], store["csrf"])
+    overleaf_client = OverleafClient(
+        ctx.obj["cookie_data"]["cookie"], ctx.obj["cookie_data"]["csrf"]
+    )
 
     # Change the current directory to the specified sync path
     os.chdir(sync_path)
@@ -245,15 +238,9 @@ def pull_changes(ctx, project_name, sync_path, olignore_path):
 )
 @click.pass_context
 def push_changes(ctx, project_name, sync_path, olignore_path):
-    if not os.path.isfile(ctx.obj["cookie_path"]):
-        raise click.ClickException(
-            "Persisted Overleaf cookie not found. Please login or check store path."
-        )
-
-    with open(ctx.obj["cookie_path"], "rb") as f:
-        store = pickle.load(f)
-
-    overleaf_client = OverleafClient(store["cookie"], store["csrf"])
+    overleaf_client = OverleafClient(
+        ctx.obj["cookie_data"]["cookie"], ctx.obj["cookie_data"]["csrf"]
+    )
 
     # Change the current directory to the specified sync path
     os.chdir(sync_path)
