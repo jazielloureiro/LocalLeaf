@@ -14,40 +14,8 @@ from localleaf.browser import OverleafBrowser
 
 
 @click.group()
-def cli():
-    pass
-
-
-@cli.command(name="login")
 @click.option(
-    "--path",
-    "cookie_path",
-    default=".olauth",
-    type=click.Path(exists=False),
-    help="Path to store the persisted Overleaf cookie.",
-)
-@click.option(
-    "-v", "--verbose", "verbose", is_flag=True, help="Enable extended error logging."
-)
-def login(cookie_path, verbose):
-    if os.path.isfile(cookie_path) and not click.confirm(
-        "Persisted Overleaf cookie already exist. Do you want to override it?"
-    ):
-        return
-
-    execute_action(
-        lambda: login_handler(cookie_path),
-        "Login successful. Cookie persisted as `"
-        + click.format_filename(cookie_path)
-        + "`. You may now sync your project.",
-        "Login failed. Please try again.",
-        verbose,
-    )
-
-
-@cli.command(name="list")
-@click.option(
-    "--store-path",
+    "--cookie-path",
     "cookie_path",
     default=".olauth",
     type=click.Path(exists=False),
@@ -56,7 +24,35 @@ def login(cookie_path, verbose):
 @click.option(
     "-v", "--verbose", "verbose", is_flag=True, help="Enable extended error logging."
 )
-def list_projects(cookie_path, verbose):
+@click.pass_context
+def cli(ctx, cookie_path, verbose):
+    ctx.ensure_object(dict)
+
+    ctx.obj["cookie_path"] = cookie_path
+    ctx.obj["verbose"] = verbose
+
+
+@cli.command(name="login")
+@click.pass_context
+def login(ctx):
+    if os.path.isfile(ctx.obj["cookie_path"]) and not click.confirm(
+        "Persisted Overleaf cookie already exist. Do you want to override it?"
+    ):
+        return
+
+    execute_action(
+        lambda: login_handler(ctx.obj["cookie_path"]),
+        "Login successful. Cookie persisted as `"
+        + click.format_filename(ctx.obj["cookie_path"])
+        + "`. You may now sync your project.",
+        "Login failed. Please try again.",
+        ctx.obj["verbose"],
+    )
+
+
+@cli.command(name="list")
+@click.pass_context
+def list_projects(ctx):
     def query_projects():
         for i in sorted(
             overleaf_client.all_projects(),
@@ -68,12 +64,12 @@ def list_projects(cookie_path, verbose):
             )
         return True
 
-    if not os.path.isfile(cookie_path):
+    if not os.path.isfile(ctx.obj["cookie_path"]):
         raise click.ClickException(
             "Persisted Overleaf cookie not found. Please login or check store path."
         )
 
-    with open(cookie_path, "rb") as f:
+    with open(ctx.obj["cookie_path"], "rb") as f:
         store = pickle.load(f)
 
     overleaf_client = OverleafClient(store["cookie"], store["csrf"])
@@ -82,7 +78,7 @@ def list_projects(cookie_path, verbose):
         query_projects,
         "Querying all projects successful.",
         "Querying all projects failed. Please try again.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
 
@@ -97,17 +93,8 @@ def list_projects(cookie_path, verbose):
 @click.option(
     "--download-path", "download_path", default=".", type=click.Path(exists=True)
 )
-@click.option(
-    "--store-path",
-    "cookie_path",
-    default=".olauth",
-    type=click.Path(exists=False),
-    help="Relative path to load the persisted Overleaf cookie.",
-)
-@click.option(
-    "-v", "--verbose", "verbose", is_flag=True, help="Enable extended error logging."
-)
-def download_pdf(project_name, download_path, cookie_path, verbose):
+@click.pass_context
+def download_pdf(ctx, project_name, download_path):
     def download_project_pdf():
         nonlocal project_name
         project_name = project_name or os.path.basename(os.getcwd())
@@ -115,7 +102,7 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
             lambda: overleaf_client.get_project(project_name),
             "Project queried successfully.",
             "Project could not be queried.",
-            verbose,
+            ctx.obj["verbose"],
         )
 
         file_name, content = overleaf_client.download_pdf(project["id"])
@@ -127,12 +114,12 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
 
         return True
 
-    if not os.path.isfile(cookie_path):
+    if not os.path.isfile(ctx.obj["cookie_path"]):
         raise click.ClickException(
             "Persisted Overleaf cookie not found. Please login or check store path."
         )
 
-    with open(cookie_path, "rb") as f:
+    with open(ctx.obj["cookie_path"], "rb") as f:
         store = pickle.load(f)
 
     overleaf_client = OverleafClient(store["cookie"], store["csrf"])
@@ -141,7 +128,7 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
         download_project_pdf,
         "Downloading project's PDF successful.",
         "Downloading project's PDF failed. Please try again.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
 
@@ -152,13 +139,6 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
     "project_name",
     default="",
     help="Specify the Overleaf project name instead of the default name of the sync directory.",
-)
-@click.option(
-    "--store-path",
-    "cookie_path",
-    default=".olauth",
-    type=click.Path(exists=False),
-    help="Relative path to load the persisted Overleaf cookie.",
 )
 @click.option(
     "-p",
@@ -177,16 +157,14 @@ def download_pdf(project_name, download_path, cookie_path, verbose):
     help="Path to the .olignore file relative to sync path (ignored if syncing from remote to local). See "
     "fnmatch / unix filename pattern matching for information on how to use it.",
 )
-@click.option(
-    "-v", "--verbose", "verbose", is_flag=True, help="Enable extended error logging."
-)
-def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
-    if not os.path.isfile(cookie_path):
+@click.pass_context
+def pull_changes(ctx, project_name, sync_path, olignore_path):
+    if not os.path.isfile(ctx.obj["cookie_path"]):
         raise click.ClickException(
             "Persisted Overleaf cookie not found. Please login or check store path."
         )
 
-    with open(cookie_path, "rb") as f:
+    with open(ctx.obj["cookie_path"], "rb") as f:
         store = pickle.load(f)
 
     overleaf_client = OverleafClient(store["cookie"], store["csrf"])
@@ -199,14 +177,14 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         lambda: overleaf_client.get_project(project_name),
         "Project queried successfully.",
         "Project could not be queried.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
     project_infos = execute_action(
         lambda: overleaf_client.get_project_infos(project["id"]),
         "Project details queried successfully.",
         "Project details could not be queried.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
     zip_file = execute_action(
@@ -215,7 +193,7 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         ),
         "Project downloaded successfully.",
         "Project could not be downloaded.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
     sync_func(
@@ -236,7 +214,7 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         > os.path.getmtime(name),
         from_name="remote",
         to_name="local",
-        verbose=verbose,
+        verbose=ctx.obj["verbose"],
     )
 
 
@@ -247,13 +225,6 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
     "project_name",
     default="",
     help="Specify the Overleaf project name instead of the default name of the sync directory.",
-)
-@click.option(
-    "--store-path",
-    "cookie_path",
-    default=".olauth",
-    type=click.Path(exists=False),
-    help="Relative path to load the persisted Overleaf cookie.",
 )
 @click.option(
     "-p",
@@ -272,16 +243,14 @@ def pull_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
     help="Path to the .olignore file relative to sync path (ignored if syncing from remote to local). See "
     "fnmatch / unix filename pattern matching for information on how to use it.",
 )
-@click.option(
-    "-v", "--verbose", "verbose", is_flag=True, help="Enable extended error logging."
-)
-def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
-    if not os.path.isfile(cookie_path):
+@click.pass_context
+def push_changes(ctx, project_name, sync_path, olignore_path):
+    if not os.path.isfile(ctx.obj["cookie_path"]):
         raise click.ClickException(
             "Persisted Overleaf cookie not found. Please login or check store path."
         )
 
-    with open(cookie_path, "rb") as f:
+    with open(ctx.obj["cookie_path"], "rb") as f:
         store = pickle.load(f)
 
     overleaf_client = OverleafClient(store["cookie"], store["csrf"])
@@ -294,14 +263,14 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         lambda: overleaf_client.get_project(project_name),
         "Project queried successfully.",
         "Project could not be queried.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
     project_infos = execute_action(
         lambda: overleaf_client.get_project_infos(project["id"]),
         "Project details queried successfully.",
         "Project details could not be queried.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
     zip_file = execute_action(
@@ -310,7 +279,7 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         ),
         "Project downloaded successfully.",
         "Project could not be downloaded.",
-        verbose,
+        ctx.obj["verbose"],
     )
 
     keep_list = olignore_keep_list(olignore_path)
@@ -331,7 +300,7 @@ def push_changes(project_name, cookie_path, sync_path, olignore_path, verbose):
         > dateutil.parser.isoparse(project["lastUpdated"]).timestamp(),
         from_name="local",
         to_name="remote",
-        verbose=verbose,
+        verbose=ctx.obj["verbose"],
     )
 
 
@@ -546,7 +515,3 @@ def olignore_keep_list(olignore_path):
 
     keep_list = [Path(item).as_posix() for item in keep_list if not os.path.isdir(item)]
     return keep_list
-
-
-if __name__ == "__main__":
-    cli()
