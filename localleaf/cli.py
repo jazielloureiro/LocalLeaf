@@ -9,37 +9,41 @@ import fnmatch
 import traceback
 from pathlib import Path
 
-from localleaf.client import OverleafClient
 from localleaf.browser import OverleafBrowser
+from localleaf.client import OverleafClient
+from localleaf.settings import Settings
 
 
 @click.group()
 @click.option(
     "--cookie-path",
     "cookie_path",
-    default=".olauth",
     type=click.Path(exists=False),
-    help="Relative path to load the persisted Overleaf cookie.",
+    help="Relative path to the persisted Overleaf cookie.",
 )
 @click.option(
     "-v", "--verbose", "verbose", is_flag=True, help="Enable extended error logging."
 )
 @click.pass_context
-def cli(ctx, cookie_path, verbose):
+def cli(ctx: click.Context, cookie_path, verbose):
     ctx.ensure_object(dict)
 
     ctx.obj["cookie_path"] = cookie_path
+
+    if not cookie_path:
+        ctx.obj["cookie_path"] = Settings().default_cookie_path()
+
     ctx.obj["verbose"] = verbose
 
     if ctx.invoked_subcommand == "login":
         return
 
-    if not os.path.isfile(cookie_path):
+    if not os.path.isfile(ctx.obj["cookie_path"]):
         raise click.ClickException(
             "Persisted Overleaf cookie not found. Please login or check store path."
         )
 
-    with open(cookie_path, "rb") as f:
+    with open(ctx.obj["cookie_path"], "rb") as f:
         ctx.obj["cookie_data"] = pickle.load(f)
 
 
