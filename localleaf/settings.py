@@ -30,8 +30,8 @@ class Settings:
     def folder_url(self, project_id):
         return f"{self._overleaf_url}/project/{project_id}/folder"
 
-    def delete_url(self, project_id, file_id):
-        return f"{self._overleaf_url}/project/{project_id}/doc/{file_id}"
+    def delete_url(self, project_id, file_type_path, file_id):
+        return f"{self._overleaf_url}/project/{project_id}/{file_type_path}/{file_id}"
 
     def compile_url(self, project_id):
         return f"{self._overleaf_url}/project/{project_id}/compile"

@@ -254,39 +254,29 @@ class OverleafClient:
         """
 
         file = None
+        file_endpoint = "doc"
 
-        # The file name contains path separators, check folders
-        if "/" in file_name:
-            local_folders = file_name.split("/")[
-                :-1
-            ]  # Remove last item since this is the file name
-            current_overleaf_folder = project_infos["rootFolder"][0][
-                "folders"
-            ]  # Set the current remote folder
+        # Set the current remote folder
+        current_overleaf_folder = project_infos["rootFolder"][0]
 
-            for local_folder in local_folders:
-                for remote_folder in current_overleaf_folder:
-                    if local_folder.lower() == remote_folder["name"].lower():
-                        file = next(
-                            (
-                                v
-                                for v in remote_folder["docs"]
-                                if v["name"] == file_name.split("/")[-1]
-                            ),
-                            None,
-                        )
-                        current_overleaf_folder = remote_folder["folders"]
-                        break
-        # File is in root folder
-        else:
-            file = next(
-                (
-                    v
-                    for v in project_infos["rootFolder"][0]["docs"]
-                    if v["name"] == file_name
-                ),
-                None,
+        for i in file_name.split("/")[:-1]:
+            for j in current_overleaf_folder["folders"]:
+                if i.lower() == j["name"].lower():
+                    current_overleaf_folder = j
+                    break
+            else:
+                return False
+
+        file = self._get_file_from_remote_folder(
+            file_name.split("/")[-1], current_overleaf_folder["docs"]
+        )
+
+        if not file:
+            file = self._get_file_from_remote_folder(
+                file_name.split("/")[-1], current_overleaf_folder["fileRefs"]
             )
+
+            file_endpoint = "file"
 
         # File not found!
         if file is None:
@@ -295,13 +285,19 @@ class OverleafClient:
         headers = {"X-Csrf-Token": self._csrf}
 
         r = requests.delete(
-            self._settings.delete_url(project_id, file["_id"]),
+            self._settings.delete_url(project_id, file_endpoint, file["_id"]),
             cookies=self._cookie,
             headers=headers,
-            json={},
         )
 
         return r.status_code == str(204)
+
+    def _get_file_from_remote_folder(self, file_name, remote_file_list):
+        for i in remote_file_list:
+            if i["name"] == file_name:
+                return i
+
+        return None
 
     def download_pdf(self, project_id):
         """
